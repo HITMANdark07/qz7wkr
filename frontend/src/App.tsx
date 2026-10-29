@@ -4,6 +4,8 @@ import { DayChart, ErrorHistogram, HorizonChart, HourChart } from "./components/
 import { PlanTable } from "./components/PlanTable";
 import { PopNumber, Segmented } from "./components/Motion";
 
+const HORIZON_DEBOUNCE_MS = 300;
+
 function Mark() {
   // Product mark: a three-blade rotor in the data hue.
   return (
@@ -32,6 +34,12 @@ export default function App() {
   const [date, setDate] = useState("2026-01-15");
   const [mode, setMode] = useState<Mode>("dayahead");
   const [horizon, setHorizon] = useState(24);
+  // Slider position updates instantly; the data request waits until dragging pauses.
+  const [horizonInput, setHorizonInput] = useState(24);
+  useEffect(() => {
+    const t = setTimeout(() => setHorizon(horizonInput), HORIZON_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [horizonInput]);
   const [confidence, setConfidence] = useState(90);
   const [day, setDay] = useState<DayView>();
   const [acc, setAcc] = useState<Accuracy>();
@@ -74,9 +82,9 @@ export default function App() {
           </div>
           {mode === "horizon" && (
             <label className="field">
-              <span>{horizon}h ahead</span>
-              <input id="horizon" type="range" min={1} max={meta?.max_horizon_h ?? 48} value={horizon}
-                onChange={(e) => setHorizon(Number(e.target.value))} />
+              <span>{horizonInput}h ahead</span>
+              <input id="horizon" type="range" min={1} max={meta?.max_horizon_h ?? 48} value={horizonInput}
+                onChange={(e) => setHorizonInput(Number(e.target.value))} />
             </label>
           )}
           <div className="field">
