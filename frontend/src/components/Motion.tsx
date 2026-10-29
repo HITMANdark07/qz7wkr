@@ -39,23 +39,32 @@ export function Segmented<T extends string | number>({ options, value, onChange,
   const pill = useRef<HTMLSpanElement>(null);
   const first = useRef(true);
 
+  const move = (animate: boolean) => {
+    const tab = bar.current?.querySelector<HTMLButtonElement>('[aria-selected="true"]');
+    const p = pill.current;
+    if (!tab || !p) return;
+    if (!animate) p.style.transition = "none";
+    p.style.transform = `translateX(${tab.offsetLeft}px)`;
+    p.style.width = `${tab.offsetWidth}px`;
+    if (!animate) { void p.offsetWidth; p.style.transition = ""; }
+  };
+
+  // Value change: slide (except the very first placement).
   useLayoutEffect(() => {
-    const move = (animate: boolean) => {
-      const tab = bar.current?.querySelector<HTMLButtonElement>('[aria-selected="true"]');
-      const p = pill.current;
-      if (!tab || !p) return;
-      if (!animate) p.style.transition = "none";
-      p.style.transform = `translateX(${tab.offsetLeft}px)`;
-      p.style.width = `${tab.offsetWidth}px`;
-      if (!animate) { void p.offsetWidth; p.style.transition = ""; }
-    };
     move(!first.current);
     first.current = false;
-    const onResize = () => move(false);
-    window.addEventListener("resize", onResize);
-    document.fonts?.ready.then(() => move(false));
-    return () => window.removeEventListener("resize", onResize);
   }, [value]);
+
+  // Snap (no animation) only when layout changes underneath: web font load and resize.
+  // Keeping this out of the value effect matters: fonts.ready is already resolved, so a
+  // snap queued on every change would cancel the slide the moment it starts.
+  useLayoutEffect(() => {
+    const snap = () => move(false);
+    document.fonts?.ready.then(snap);
+    window.addEventListener("resize", snap);
+    return () => window.removeEventListener("resize", snap);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div ref={bar} className="t-tabs" role="tablist" aria-label={label}>
