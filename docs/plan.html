@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wind Forecast Monitor Plan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: single column briefing, mockup panel first, then logic, architecture, delivery */
+:root{--bg:#f4f6f8;--panel:#fff;--fg:#14202b;--muted:#5b6b78;--line:#d9e0e6;--wind:#1f7a8c;--fcst:#e07a1f;--ok:#2e8b57;--warn:#c0392b;
+--sans:"IBM Plex Sans",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root{--bg:#0f161c;--panel:#16212a;--fg:#e4ecf2;--muted:#93a4b1;--line:#2a3945;--wind:#4fb3c6;--fcst:#f0a050}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--sans);padding:32px max(16px,4vw)}
+main{max-width:1040px;margin:auto;display:grid;gap:28px}
+h1{font-size:28px;margin:0}h2{font-size:19px;margin:0 0 12px}h3{font-size:15px;margin:0 0 6px}
+.sub{color:var(--muted);margin:4px 0 0}
+section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:22px}
+.formula{font-family:var(--mono);background:var(--bg);padding:10px 14px;border-radius:6px;display:inline-block}
+.tag{font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.mock{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.mbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--bg)}
+.mbar b{margin-right:auto}
+.ctl{border:1px solid var(--line);border-radius:6px;padding:5px 10px;font:13px var(--mono);background:var(--panel)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;font-size:13px}
+.seg span{padding:5px 10px}.seg .on{background:var(--wind);color:#fff}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;padding:16px}
+.tile{border:1px solid var(--line);border-radius:6px;padding:12px}
+.tile .v{font:600 22px var(--mono);font-variant-numeric:tabular-nums}
+.tile.key{border-color:var(--fcst)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;padding:0 16px 16px}
+.chart{border:1px solid var(--line);border-radius:6px;padding:10px}
+svg{width:100%;height:auto;display:block}
+svg text{fill:var(--muted);font:11px var(--mono)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:4px}
+.dot{display:inline-block;width:10px;height:3px;vertical-align:middle;margin-right:5px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600}
+code,.mono{font-family:var(--mono);font-size:13px}
+.arch{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:stretch}
+.box{border:1px solid var(--line);border-radius:6px;padding:12px;background:var(--bg)}
+.box ul{margin:6px 0 0;padding-left:18px;font-size:13px}
+pre{background:var(--bg);padding:14px;border-radius:6px;overflow-x:auto;font:13px/1.5 var(--mono);margin:0}
+ol.steps{margin:0;padding-left:20px}ol.steps li{margin-bottom:6px}
+.note{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <span class="tag">Gridbricks pilot · build plan</span>
+  <h1>UK Wind Forecast Monitor</h1>
+  <p class="sub">A web app for a UK utility's day-ahead trading desk, covering purchase decisions made in January 2026.</p>
+</header>
+
+<section>
+  <h2>The trader's question</h2>
+  <p class="formula">power to buy on the day-ahead market ≈ demand − expected wind</p>
+  <p>Wind is set by the weather, so the trader has to rely on a forecast. The app answers two questions:</p>
+  <ol>
+    <li><b>What wind forecast did I have when I had to decide?</b> That is the latest forecast published before the cutoff.</li>
+    <li><b>How far can I trust it?</b> The forecast's error measured against actual output, in MW, so the desk can size a safety buffer.</li>
+  </ol>
+  <p class="note">Data: Elexon BMRS only. Actuals come from <code>FUELHH</code> (fuelType = WIND, every 30 min). Forecasts come from <code>WINDFOR</code> (startTime + publishTime).</p>
+</section>
+
+<section>
+  <h2>What the trader sees</h2>
+  <p class="note">Mockup with illustrative numbers. The real app uses Elexon data.</p>
+  <div class="mock">
+    <div class="mbar">
+      <b>UK Wind Forecast Monitor</b>
+      <span class="ctl">Delivery day: 15 Jan 2026 ▾</span>
+      <span class="seg"><span class="on">Day-ahead (D-1 11:00)</span><span>Horizon: 24h</span></span>
+    </div>
+    <div class="tiles">
+      <div class="tile"><div class="tag">Forecast energy</div><div class="v">212 GWh</div><div class="note">for the delivery day</div></div>
+      <div class="tile"><div class="tag">Peak / minimum</div><div class="v">11.4 / 5.8 GW</div><div class="note">highest and lowest half-hour</div></div>
+      <div class="tile"><div class="tag">Typical error (MAE)</div><div class="v">±820 MW</div><div class="note">January, at this cutoff</div></div>
+      <div class="tile key"><div class="tag">Planning buffer (P90)</div><div class="v">1.9 GW</div><div class="note">90% of the time, actual wind was no more than this far below the forecast</div></div>
+    </div>
+    <div class="grid2">
+      <div class="chart">
+        <h3>Forecast vs actual, 15 Jan</h3>
+        <svg viewBox="0 0 400 190">
+          <g stroke="var(--line)"><line x1="40" y1="20" x2="390" y2="20"/><line x1="40" y1="75" x2="390" y2="75"/><line x1="40" y1="130" x2="390" y2="130"/><line x1="40" y1="165" x2="390" y2="165"/></g>
+          <text x="4" y="24">12 GW</text><text x="4" y="79">8 GW</text><text x="4" y="134">4 GW</text>
+          <text x="40" y="182">00:00</text><text x="200" y="182">12:00</text><text x="350" y="182">23:30</text>
+          <path d="M40 70 C100 50 150 40 210 60 S320 110 390 95 L390 135 C320 150 260 100 210 95 S100 85 40 105 Z" fill="var(--fcst)" opacity=".15"/>
+          <path d="M40 88 C100 68 150 58 210 78 S320 128 390 115" fill="none" stroke="var(--fcst)" stroke-width="2.5" stroke-dasharray="6 4"/>
+          <path d="M40 92 C90 80 140 50 200 72 S300 140 390 122" fill="none" stroke="var(--wind)" stroke-width="2.5"/>
+        </svg>
+        <div class="legend"><span><i class="dot" style="background:var(--wind)"></i>Actual</span><span><i class="dot" style="background:var(--fcst)"></i>Forecast</span><span><i class="dot" style="background:var(--fcst);opacity:.3;height:8px"></i>P10–P90 error band</span></div>
+      </div>
+      <div class="chart">
+        <h3>Accuracy by forecast horizon (all of January)</h3>
+        <svg viewBox="0 0 400 190">
+          <g stroke="var(--line)"><line x1="40" y1="20" x2="390" y2="20"/><line x1="40" y1="92" x2="390" y2="92"/><line x1="40" y1="165" x2="390" y2="165"/></g>
+          <text x="4" y="24">1.6 GW</text><text x="4" y="96">0.8 GW</text><text x="4" y="169">0</text>
+          <text x="40" y="182">1h</text><text x="200" y="182">24h</text><text x="360" y="182">48h</text>
+          <g fill="var(--wind)">
+            <rect x="48" y="135" width="26" height="30"/><rect x="88" y="120" width="26" height="45"/><rect x="128" y="105" width="26" height="60"/><rect x="168" y="92" width="26" height="73"/>
+            <rect x="208" y="80" width="26" height="85"/><rect x="248" y="68" width="26" height="97"/><rect x="288" y="55" width="26" height="110"/><rect x="328" y="42" width="26" height="123"/>
+          </g>
+        </svg>
+        <div class="legend">MAE rises the further ahead the forecast is made. This shows how much accuracy is lost by deciding a day early.</div>
+      </div>
+      <div class="chart">
+        <h3>Error by hour of day</h3>
+        <p class="note">MAE and bias for each hour, to show when the forecast is weakest (e.g. evening ramps).</p>
+      </div>
+      <div class="chart">
+        <h3>Error distribution</h3>
+        <p class="note">Histogram of forecast − actual, marked at P10, P50 and P90. The P90 mark gives the planning buffer.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>How the "latest available forecast" is picked</h2>
+  <p>Elexon publishes many forecasts for the same half-hour. For delivery day D, the app keeps only forecasts that existed at the decision time, and takes the newest of them for each target time.</p>
+  <svg viewBox="0 0 760 150" aria-label="Forecast selection timeline">
+    <line x1="20" y1="70" x2="740" y2="70" stroke="var(--line)" stroke-width="2"/>
+    <text x="20" y="100">D-2</text><text x="250" y="100">D-1 00:00</text><text x="380" y="100">D-1 11:00</text><text x="560" y="100">D 00:00 → 23:30 (delivery)</text>
+    <line x1="410" y1="30" x2="410" y2="110" stroke="var(--warn)" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="418" y="28" style="fill:var(--warn)">cutoff: auction closes</text>
+    <g fill="var(--muted)"><circle cx="80" cy="70" r="6"/><circle cx="170" cy="70" r="6"/><circle cx="260" cy="70" r="6"/></g>
+    <circle cx="350" cy="70" r="8" fill="var(--ok)"/><text x="300" y="50" style="fill:var(--ok)">✓ used</text>
+    <g fill="none" stroke="var(--muted)"><circle cx="470" cy="70" r="6"/><circle cx="530" cy="70" r="6"/></g>
+    <text x="455" y="130">✗ published too late, ignored</text>
+    <rect x="560" y="62" width="180" height="16" fill="var(--wind)" opacity=".25"/>
+  </svg>
+  <table>
+    <tr><th>Mode</th><th>Rule</th><th>Why</th></tr>
+    <tr><td><b>Day-ahead</b> (default)</td><td>Newest forecast with publishTime ≤ 11:00 UK time on D-1</td><td>Matches the real GB day-ahead auction gate</td></tr>
+    <tr><td><b>Horizon</b> (slider 1–48h)</td><td>Newest forecast with publishTime ≤ startTime − H hours</td><td>"How good is a forecast made H hours ahead?"</td></tr>
+  </table>
+  <p class="note">Scope: decisions made 1–31 Jan 2026 → delivery days 2 Jan–1 Feb 2026, using forecasts published from 30 Dec 2025 onward. Forecasts are compared with actuals only where their timestamps match.</p>
+</section>
+
+<section>
+  <h2>Accuracy numbers we report</h2>
+  <table>
+    <tr><th>Metric</th><th>Plain meaning</th></tr>
+    <tr><td class="mono">MAE</td><td>Average size of the miss, in MW</td></tr>
+    <tr><td class="mono">RMSE</td><td>Like MAE, but big misses count more</td></tr>
+    <tr><td class="mono">Bias</td><td>Whether the forecast runs high or low on average (positive = over-forecast)</td></tr>
+    <tr><td class="mono">P10 / P50 / P90 error</td><td>The error range. The P90 shortfall becomes the "buy this much extra" buffer</td></tr>
+    <tr><td class="mono">Normalised MAE (%)</td><td>MAE ÷ average actual output, for comparing against other periods</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Architecture</h2>
+  <div class="arch">
+    <div class="box"><h3>1 · Ingest (run once)</h3><span class="mono">scripts/fetch_data.py</span><ul><li>Calls the Elexon FUELHH and WINDFOR stream APIs</li><li>Filters to WIND and the January window</li><li>Saves compact files to <code>backend/data/</code></li></ul></div>
+    <div class="box"><h3>2 · Backend (Python)</h3><span class="mono">FastAPI</span><ul><li><code>analytics.py</code>: forecast selection and metrics (pandas)</li><li><code>GET /api/day?date&amp;mode&amp;horizon</code></li><li><code>GET /api/accuracy?mode&amp;horizon</code></li><li><code>GET /api/meta</code></li><li>pytest unit tests</li></ul></div>
+    <div class="box"><h3>3 · Frontend (React)</h3><span class="mono">Vite + TypeScript + Recharts</span><ul><li>Controls, KPI tiles, 4 charts</li><li>Calls <code>/api/*</code> on the same domain</li></ul></div>
+    <div class="box"><h3>4 · Run &amp; deploy</h3><ul><li><b>Docker</b>: docker-compose (api + web)</li><li><b>Vercel</b>: static React build + FastAPI as a Python serverless function</li><li>GitHub Actions runs pytest</li></ul></div>
+  </div>
+</section>
+
+<section>
+  <h2>Repo layout</h2>
+<pre>&lt;random-name&gt;/
+├── api/index.py            # Vercel entry → FastAPI app
+├── backend/
+│   ├── app/main.py         # routes
+│   ├── app/analytics.py    # forecast selection + metrics
+│   ├── data/               # cached Jan-2026 Elexon data
+│   ├── scripts/fetch_data.py
+│   ├── tests/
+│   └── Dockerfile
+├── frontend/               # React + Vite + TS
+│   ├── src/
+│   └── Dockerfile
+├── docker-compose.yml
+├── vercel.json
+├── requirements.txt
+└── README.md               # files, how to run, live link, AI-usage note</pre>
+</section>
+
+<section>
+  <h2>Build order</h2>
+  <ol class="steps">
+    <li>Fetch January data from Elexon and check its real shape (WINDFOR resolution, number of publishes per day).</li>
+    <li>Write <code>analytics.py</code> and its tests: forecast selection and metrics.</li>
+    <li>Build the FastAPI endpoints.</li>
+    <li>Build the React dashboard: controls, tiles and charts.</li>
+    <li>Add Docker, docker-compose and a run check.</li>
+    <li>Deploy to Vercel and push a public GitHub repo with a random name and the README.</li>
+    <li>Write the video script: a 5-minute client pitch and a 5-minute tech-lead walkthrough. You record it.</li>
+  </ol>
+  <p class="note">Your part: create the GitHub repo and Vercel account and log in, record the video, and submit the form. Open every link in an incognito window first.</p>
+</section>
+
+</main>
+</body>
+</html>
