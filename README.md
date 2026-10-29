@@ -6,7 +6,7 @@ A web app for a UK energy supplier's **day-ahead trading desk**. It answers two 
 2. **How much can we trust it?** Forecast error against actual national wind output: MAE, RMSE, bias, P10/P50/P90, plus error by horizon, by hour of day, and its distribution. The P90 error becomes a *planning buffer*: how much extra power to buy to stay covered 9 hours in 10.
 3. **How much wind can we count on tomorrow, hour by hour?** For a chosen confidence (50/80/90/95%), *dependable wind = forecast − that percentile of January's errors for the same hour of day*. It is shown as a line on the chart and as an hourly table that can be copied as CSV into a buying sheet: buy (demand − dependable wind).
 
-**Live app:** _<add Vercel URL>_
+**Live app:** https://qz7wkr-one.vercel.app
 
 ## Data
 
