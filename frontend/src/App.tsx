@@ -3,12 +3,25 @@ import { Accuracy, api, DayView, fmtDateTime, gw, Meta, Mode, signedGw } from ".
 import { DayChart, ErrorHistogram, HorizonChart, HourChart } from "./components/Charts";
 import { PlanTable } from "./components/PlanTable";
 
-function Tile({ label, value, note, highlight }: { label: string; value: string; note: string; highlight?: boolean }) {
+function Mark() {
+  // Product mark: a three-blade rotor in the data hue.
   return (
-    <div className={`tile${highlight ? " tile-key" : ""}`}>
-      <div className="tile-label">{label}</div>
-      <div className="tile-value">{value}</div>
-      <div className="tile-note">{note}</div>
+    <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
+      <rect width="28" height="28" rx="6" fill="var(--ink)" />
+      {[0, 120, 240].map((a) => (
+        <path key={a} d="M14 14 L12.6 4.5 Q14 3 15.4 4.5 Z" fill="var(--hue)" transform={`rotate(${a} 14 14)`} />
+      ))}
+      <circle cx="14" cy="14" r="1.8" fill="#fff" />
+    </svg>
+  );
+}
+
+function Stat({ label, value, note, tone }: { label: string; value: string; note: string; tone?: "bad" }) {
+  return (
+    <div className="stat">
+      <div className="stat-label">{label}</div>
+      <div className={`stat-value${tone ? " " + tone : ""}`}>{value}</div>
+      <div className="stat-note">{note}</div>
     </div>
   );
 }
@@ -33,123 +46,139 @@ export default function App() {
   }, [date, mode, horizon, confidence]);
 
   const m = acc?.overall;
-  const decisionLabel = mode === "dayahead"
-    ? `Latest forecast published before ${meta?.gate_closure_local ?? "11:00"} UK on the day before delivery`
-    : `Latest forecast published at least ${horizon}h before each hour`;
+  const forecastGwh = day ? day.summary.forecast_energy_mwh / 1000 : 0;
+  const countOnGwh = day ? day.summary.dependable_energy_mwh / 1000 : 0;
+  const longDate = new Date(date).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
   return (
-    <div className="page">
-      <header className="header">
-        <div>
-          <div className="eyebrow">Day-ahead trading desk · GB national wind</div>
-          <h1>Wind Forecast Monitor</h1>
+    <>
+      <header className="bar">
+        <div className="brand">
+          <Mark />
+          <div>
+            <div className="brand-name">Wind Forecast Monitor</div>
+            <div className="brand-scope">GB national wind · day-ahead desk · Jan 2026 pilot</div>
+          </div>
         </div>
         <div className="controls">
-          <label>
+          <label className="field">
             <span>Delivery day</span>
             <input id="date" type="date" value={date} min={meta?.first_delivery_day} max={meta?.last_delivery_day}
               onChange={(e) => e.target.value && setDate(e.target.value)} />
           </label>
-          <div className="seg" role="group" aria-label="Decision rule">
-            <button className={mode === "dayahead" ? "on" : ""} onClick={() => setMode("dayahead")}>Day-ahead (D-1 11:00)</button>
-            <button className={mode === "horizon" ? "on" : ""} onClick={() => setMode("horizon")}>Fixed horizon</button>
-          </div>
-          <div className="seg" role="group" aria-label="Confidence level">
-            {[50, 80, 90, 95].map((c) => (
-              <button key={c} className={confidence === c ? "on" : ""} onClick={() => setConfidence(c)}>{c}%</button>
-            ))}
+          <div className="field">
+            <span>Forecast used</span>
+            <div className="seg" role="group" aria-label="Forecast used">
+              <button className={mode === "dayahead" ? "on" : ""} onClick={() => setMode("dayahead")}>At gate closure</button>
+              <button className={mode === "horizon" ? "on" : ""} onClick={() => setMode("horizon")}>Fixed horizon</button>
+            </div>
           </div>
           {mode === "horizon" && (
-            <label>
-              <span>Horizon: {horizon}h</span>
+            <label className="field">
+              <span>{horizon}h ahead</span>
               <input id="horizon" type="range" min={1} max={meta?.max_horizon_h ?? 48} value={horizon}
                 onChange={(e) => setHorizon(Number(e.target.value))} />
             </label>
           )}
+          <div className="field">
+            <span>Confidence</span>
+            <div className="seg" role="group" aria-label="Confidence level">
+              {[50, 80, 90, 95].map((c) => (
+                <button key={c} className={confidence === c ? "on" : ""} onClick={() => setConfidence(c)}>{c}%</button>
+              ))}
+            </div>
+          </div>
         </div>
       </header>
 
-      {error && <div className="error">Could not load data: {error}. Check that the API is running.</div>}
+      <main className="page">
+        {error && <div className="error">Could not load data: {error}. Check that the API is running.</div>}
 
-      {day && m && acc && (
-        <>
-          <p className="rule">
-            <b>Decision rule:</b> {decisionLabel}.
-            {day.cutoff && <> Gate closure for {date}: <b>{fmtDateTime(day.cutoff)}</b>.</>}
-            {day.forecast_publish_times.length > 0 && (
-              <> Forecast run used: <b>{day.forecast_publish_times.map(fmtDateTime).join(", ")}</b>.</>
-            )}
-          </p>
+        {day && m && acc && (
+          <>
+            <section className="lead">
+              <div className="answer">
+                <div className="eyebrow">{longDate} · wind you can count on</div>
+                <div className="answer-figure">
+                  {countOnGwh.toFixed(0)}<span> GWh</span>
+                </div>
+                <div className="answer-of">of {forecastGwh.toFixed(0)} GWh forecast</div>
+                <div className="gauge" aria-hidden="true">
+                  <div className="gauge-fill" style={{ width: `${(countOnGwh / forecastGwh) * 100}%` }} />
+                </div>
+                <p className="answer-text">
+                  In {confidence}% of January hours, actual wind met or beat this level. Buy the remaining demand on the
+                  day-ahead market.
+                </p>
+                <dl className="facts">
+                  <div><dt>Gate closure</dt><dd>{day.cutoff ? fmtDateTime(day.cutoff) : `${horizon}h before each hour`}</dd></div>
+                  <div><dt>Forecast run</dt><dd>{day.forecast_publish_times.map(fmtDateTime).join(", ") || "–"}</dd></div>
+                  <div><dt>Peak / low</dt><dd>{gw(day.summary.forecast_peak_mw)} / {gw(day.summary.forecast_min_mw)}</dd></div>
+                </dl>
+              </div>
+              <div className="panel chart-panel">
+                <div className="panel-head">
+                  <h2>Forecast, actual and count-on level</h2>
+                  <span className="muted">This day: off by {gw(day.day_metrics.mae)} on average</span>
+                </div>
+                <DayChart day={day} />
+              </div>
+            </section>
 
-          <section className="tiles">
-            <Tile label="Forecast wind energy" value={`${(day.summary.forecast_energy_mwh / 1000).toFixed(0)} GWh`}
-              note="Expected over the delivery day" />
-            <Tile label="Peak / low" value={`${((day.summary.forecast_peak_mw ?? 0) / 1000).toFixed(1)} / ${gw(day.summary.forecast_min_mw)}`}
-              note="Windiest and calmest forecast hour" />
-            <Tile label="Typical miss (MAE)" value={gw(m.mae)}
-              note={`January average · ${m.nmae_pct?.toFixed(0)}% of mean output`} />
-            <Tile label="Bias" value={signedGw(m.bias)}
-              note={m.bias > 0 ? "Forecast runs high: expect less wind than shown" : "Forecast runs low: expect more wind than shown"} />
-            <Tile highlight label={`Wind you can count on (${confidence}%)`}
-              value={`${(day.summary.dependable_energy_mwh / 1000).toFixed(0)} GWh`}
-              note={`Actual wind met or beat this in ${confidence}% of January hours. Buy the rest elsewhere`} />
-            <Tile label="Planning buffer (P90)" value={gw(Math.max(m.p90, 0))}
-              note="In 9 of 10 hours, wind fell short of forecast by no more than this" />
-          </section>
+            <section className="stats">
+              <Stat label="Typical miss (MAE)" value={gw(m.mae)} note={`${m.nmae_pct?.toFixed(0)}% of mean output`} />
+              <Stat label="Bias" value={signedGw(m.bias)} tone={m.bias > 0 ? "bad" : undefined}
+                note={m.bias > 0 ? "Forecast runs high" : "Forecast runs low"} />
+              <Stat label="Shortfall at P90" value={gw(Math.max(m.p90, 0))} note="Buffer that covers 9 hours in 10" />
+              <Stat label="Big misses (RMSE)" value={gw(m.rmse)} note="Weights large errors more" />
+              <Stat label="Hours checked" value={String(m.count)} note={`Forecasts ${m.mean_horizon_h.toFixed(0)}h old on average`} />
+            </section>
 
-          <section className="card">
-            <div className="card-head">
-              <h2>Forecast vs actual · {new Date(date).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</h2>
-              <span className="muted">
-                On this day: MAE {gw(day.day_metrics.mae)}, bias {day.day_metrics.count ? signedGw(day.day_metrics.bias) : "–"}
-              </span>
-            </div>
-            <DayChart day={day} />
-            <p className="muted small">Shaded band: where actual wind landed 80% of the time in January, given this forecast. Times in UK local time.</p>
-          </section>
+            <PlanTable day={day} />
 
-          <PlanTable day={day} />
+            <h2 className="section-title">How far the forecast can be trusted <span className="muted">· all of January 2026</span></h2>
+            <section className="grid">
+              <div className="panel">
+                <h3>Miss by forecast age</h3>
+                <p className="muted small">Average miss by hours between publication and delivery. Buying at gate closure means the highlighted range.</p>
+                <HorizonChart acc={acc} />
+              </div>
+              <div className="panel">
+                <h3>Miss by hour of day</h3>
+                <p className="muted small">Bars: size of the miss. Line: bias, above zero means too much wind was promised.</p>
+                <HourChart acc={acc} />
+              </div>
+              <div className="panel">
+                <h3>Spread of errors</h3>
+                <p className="muted small">Hours by forecast − actual. Right of zero is a shortfall.</p>
+                <ErrorHistogram acc={acc} />
+              </div>
+              <div className="panel">
+                <h3>Error percentiles</h3>
+                <table className="stats-table">
+                  <tbody>
+                    <tr><td>P10: more wind than forecast</td><td>{gw(m.p10, 2)}</td></tr>
+                    <tr><td>P50: the typical hour</td><td>{gw(m.p50, 2)}</td></tr>
+                    <tr><td>P90: shortfall buffer</td><td>{gw(m.p90, 2)}</td></tr>
+                    <tr><td>Mean absolute error</td><td>{gw(m.mae, 2)}</td></tr>
+                    <tr><td>Root mean square error</td><td>{gw(m.rmse, 2)}</td></tr>
+                    <tr><td>Normalised MAE</td><td>{m.nmae_pct?.toFixed(1)}%</td></tr>
+                  </tbody>
+                </table>
+                <p className="muted small">Error = forecast − actual.</p>
+              </div>
+            </section>
+          </>
+        )}
 
-          <h2 className="section-title">How far can the forecast be trusted? · all of January 2026</h2>
-          <section className="grid">
-            <div className="card">
-              <h3>Accuracy by forecast horizon</h3>
-              <p className="muted small">Average miss (MAE) by how many hours ahead the forecast was published. Day-ahead buying is stuck in the shaded window.</p>
-              <HorizonChart acc={acc} />
-            </div>
-            <div className="card">
-              <h3>Error by hour of day</h3>
-              <p className="muted small">Which delivery hours the forecast handles worst. Bars show the size of the miss, the line shows its direction.</p>
-              <HourChart acc={acc} />
-            </div>
-            <div className="card">
-              <h3>Error distribution</h3>
-              <p className="muted small">Hours by forecast error. Right of zero means less wind arrived than forecast.</p>
-              <ErrorHistogram acc={acc} />
-            </div>
-            <div className="card">
-              <h3>Summary statistics</h3>
-              <table className="stats">
-                <tbody>
-                  <tr><td>Hours compared</td><td>{m.count}</td></tr>
-                  <tr><td>MAE: average size of miss</td><td>{gw(m.mae, 2)}</td></tr>
-                  <tr><td>RMSE: penalises big misses</td><td>{gw(m.rmse, 2)}</td></tr>
-                  <tr><td>Bias: average signed error</td><td>{signedGw(m.bias)}</td></tr>
-                  <tr><td>P10 / P50 / P90 error</td><td>{gw(m.p10)} / {gw(m.p50)} / {gw(m.p90)}</td></tr>
-                  <tr><td>Normalised MAE</td><td>{m.nmae_pct?.toFixed(1)}%</td></tr>
-                  <tr><td>Average forecast age</td><td>{m.mean_horizon_h.toFixed(1)} h</td></tr>
-                </tbody>
-              </table>
-              <p className="muted small">Error = forecast − actual. Positive means the forecast promised more wind than arrived.</p>
-            </div>
-          </section>
-        </>
-      )}
-
-      <footer className="muted small">
-        Data: {meta?.source ?? "Elexon BMRS"} · {meta?.forecast_runs} forecast runs, {meta?.actual_points} half-hourly actuals.
-        Delivery days {meta?.first_delivery_day} to {meta?.last_delivery_day} (purchase decisions made in January 2026).
-      </footer>
-    </div>
+        <footer className="foot">
+          <span>Wind Forecast Monitor</span>
+          <span className="muted">
+            Source: {meta?.source ?? "Elexon BMRS"} · {meta?.forecast_runs} forecast runs · {meta?.actual_points} half-hourly
+            actuals · delivery {meta?.first_delivery_day} to {meta?.last_delivery_day}
+          </span>
+        </footer>
+      </main>
+    </>
   );
 }

@@ -23,8 +23,8 @@ export function PlanTable({ day }: { day: DayView }) {
   };
 
   return (
-    <section className="card">
-      <div className="card-head">
+    <section className="panel">
+      <div className="panel-head">
         <h2>Hourly buying plan · wind at {day.confidence}% confidence</h2>
         <button className="btn" onClick={copy}>{copied ? "Copied" : "Copy as CSV"}</button>
       </div>
