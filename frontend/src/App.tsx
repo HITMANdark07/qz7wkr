@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Accuracy, api, DayView, fmtDateTime, gw, Meta, Mode, signedGw } from "./api";
 import { DayChart, ErrorHistogram, HorizonChart, HourChart } from "./components/Charts";
 import { PlanTable } from "./components/PlanTable";
+import { PopNumber, Segmented } from "./components/Motion";
 
 function Mark() {
   // Product mark: a three-blade rotor in the data hue.
@@ -20,7 +21,7 @@ function Stat({ label, value, note, tone }: { label: string; value: string; note
   return (
     <div className="stat">
       <div className="stat-label">{label}</div>
-      <div className={`stat-value${tone ? " " + tone : ""}`}>{value}</div>
+      <div className={`stat-value${tone ? " " + tone : ""}`}><PopNumber value={value} /></div>
       <div className="stat-note">{note}</div>
     </div>
   );
@@ -68,10 +69,8 @@ export default function App() {
           </label>
           <div className="field">
             <span>Forecast used</span>
-            <div className="seg" role="group" aria-label="Forecast used">
-              <button className={mode === "dayahead" ? "on" : ""} onClick={() => setMode("dayahead")}>At gate closure</button>
-              <button className={mode === "horizon" ? "on" : ""} onClick={() => setMode("horizon")}>Fixed horizon</button>
-            </div>
+            <Segmented label="Forecast used" value={mode} onChange={setMode}
+              options={[{ value: "dayahead", label: "At gate closure" }, { value: "horizon", label: "Fixed horizon" }]} />
           </div>
           {mode === "horizon" && (
             <label className="field">
@@ -82,11 +81,8 @@ export default function App() {
           )}
           <div className="field">
             <span>Confidence</span>
-            <div className="seg" role="group" aria-label="Confidence level">
-              {[50, 80, 90, 95].map((c) => (
-                <button key={c} className={confidence === c ? "on" : ""} onClick={() => setConfidence(c)}>{c}%</button>
-              ))}
-            </div>
+            <Segmented label="Confidence level" value={confidence} onChange={setConfidence}
+              options={[50, 80, 90, 95].map((c) => ({ value: c, label: `${c}%` }))} />
           </div>
         </div>
       </header>
@@ -96,11 +92,11 @@ export default function App() {
 
         {day && m && acc && (
           <>
-            <section className="lead">
+            <section className="lead t-reveal">
               <div className="answer">
                 <div className="eyebrow">{longDate} · wind you can count on</div>
                 <div className="answer-figure">
-                  {countOnGwh.toFixed(0)}<span> GWh</span>
+                  <PopNumber value={countOnGwh.toFixed(0)} /><span className="unit"> GWh</span>
                 </div>
                 <div className="answer-of">of {forecastGwh.toFixed(0)} GWh forecast</div>
                 <div className="gauge" aria-hidden="true">

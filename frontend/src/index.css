@@ -28,9 +28,6 @@ h3 { font-size: 15px; font-weight: 600; margin: 0 0 2px; }
 .controls { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
 .field { display: grid; gap: 4px; font-size: 11px; color: var(--muted); }
 input[type="date"] { font: 14px var(--sans); padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
-.seg { display: inline-flex; background: var(--ground); border-radius: 7px; padding: 2px; }
-.seg button { border: 0; background: transparent; padding: 6px 11px; font: 500 13px var(--sans); color: var(--muted); border-radius: 5px; cursor: pointer; }
-.seg button.on { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--line); }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--hue); outline-offset: 2px; }
 
 .page { max-width: 1320px; margin: 0 auto; padding: 24px max(20px, 3vw) 40px; display: grid; gap: 20px; }
@@ -43,7 +40,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--hue); outli
 .answer { padding: 8px 4px; display: flex; flex-direction: column; }
 .eyebrow { font-size: 13px; color: var(--muted); }
 .answer-figure { font-size: 112px; font-weight: 700; letter-spacing: -0.04em; line-height: 0.95; color: var(--hue); margin-top: 10px; font-variant-numeric: tabular-nums; }
-.answer-figure span { font-size: 32px; letter-spacing: 0; color: var(--ink); font-weight: 600; }
+.answer-figure .unit { font-size: 32px; letter-spacing: 0; color: var(--ink); font-weight: 600; }
 .answer-of { font-size: 20px; margin-top: 6px; }
 .gauge { height: 10px; background: #fbe4cf; border-radius: 5px; margin: 16px 0 14px; overflow: hidden; }
 .gauge-fill { height: 100%; background: var(--hue); transition: width .4s ease; }
@@ -81,3 +78,49 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--hue); outli
 
 .foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding-top: 16px; margin-top: 12px; font-size: 13px; }
 .foot > span:first-child { font-weight: 700; }
+
+/* ── Motion (transitions.dev tokens and recipes) ───────────────── */
+:root {
+  --duration-fast: 250ms;
+  --duration-slow: 400ms;
+  --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --blur-small: 2px;
+  --digit-dur: 500ms;
+  --digit-distance: 8px;
+  --digit-stagger: 70ms;
+  --digit-blur: 2px;
+  --digit-ease: cubic-bezier(0.34, 1.45, 0.64, 1);
+  --tabs-dur: 250ms;
+  --tabs-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.gauge-fill { transition: width var(--duration-slow) var(--ease-smooth-out); }
+
+/* #16 Tabs sliding */
+.t-tabs { position: relative; display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: 7px; background: var(--ground); }
+.t-tab { position: relative; z-index: 1; appearance: none; border: 0; background: transparent; padding: 6px 11px;
+  font: 500 13px var(--sans); color: var(--muted); border-radius: 5px; cursor: pointer; transition: color var(--tabs-dur) var(--tabs-ease); }
+.t-tab:hover, .t-tab[aria-selected="true"] { color: var(--ink); }
+.t-tabs-pill { position: absolute; top: 2px; bottom: 2px; left: 0; width: 0; z-index: 0; pointer-events: none;
+  background: var(--surface); border-radius: 5px; box-shadow: 0 0 0 1px var(--line);
+  transition: transform var(--tabs-dur) var(--tabs-ease), width var(--tabs-dur) var(--tabs-ease); will-change: transform, width; }
+
+/* #02 Number pop-in */
+@keyframes t-digit-pop-in {
+  0% { transform: translateY(var(--digit-distance)); opacity: 0; filter: blur(var(--digit-blur)); }
+  100% { transform: translateY(0); opacity: 1; filter: blur(0); }
+}
+.t-digit-group { display: inline-flex; align-items: baseline; }
+.t-digit { display: inline-block; }
+.t-digit-group.is-animating .t-digit { animation: t-digit-pop-in var(--digit-dur) var(--digit-ease) both; }
+.t-digit-group.is-animating .t-digit[data-stagger="1"] { animation-delay: var(--digit-stagger); }
+.t-digit-group.is-animating .t-digit[data-stagger="2"] { animation-delay: calc(var(--digit-stagger) * 2); }
+.t-digit-group.is-animating .t-digit[data-same] { animation: none; }
+
+/* #14 Content reveal on first load */
+@keyframes t-reveal { from { opacity: 0; filter: blur(var(--blur-small)); } to { opacity: 1; filter: blur(0); } }
+.t-reveal { animation: t-reveal var(--duration-slow) ease-in-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .t-digit-group .t-digit, .t-reveal { animation: none !important; }
+  .t-tabs-pill, .t-tab, .gauge-fill { transition: none !important; }
+}

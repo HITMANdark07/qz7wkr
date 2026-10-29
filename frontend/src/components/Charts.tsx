@@ -6,6 +6,8 @@ import { Accuracy, DayView, fmtTime } from "../api";
 
 // Colour goes on data: one hue (count-on), the forecast, the actual in ink; everything else neutral.
 const C = { hue: "#15a35a", forecast: "#e07a1f", ink: "#15212a", neutral: "#b7c1c6", grid: "#e6ebea", bad: "#c2410c", muted: "#5d6b74" };
+// Chart redraws share the motion scale: --duration-slow, smooth-out.
+const ANIM = { animationDuration: 400, animationEasing: "ease-out" } as const;
 const AXIS = { fontSize: 12, stroke: C.muted, tickLine: false, axisLine: false } as const;
 const toGw = (mw: number) => (mw / 1000).toFixed(1);
 const gwTick = (v: number) => `${+(v / 1000).toFixed(1)}`;
@@ -39,14 +41,14 @@ export function DayChart({ day }: { day: DayView }) {
           labelFormatter={(t) => `${fmtTime(t as string)} UK`}
           formatter={(v, name) => [Array.isArray(v) ? `${toGw(Number(v[0]))}–${toGw(Number(v[1]))} GW` : mwTip(Number(v)), name]}
         />
-        <Area dataKey="band" name="Usual range" fill={C.forecast} fillOpacity={0.1} stroke="none" connectNulls />
-        <Line dataKey="forecast" name="Forecast" stroke={C.forecast} strokeWidth={2} strokeDasharray="6 4" dot={false} connectNulls>
+        <Area {...ANIM} dataKey="band" name="Usual range" fill={C.forecast} fillOpacity={0.1} stroke="none" connectNulls />
+        <Line {...ANIM} dataKey="forecast" name="Forecast" stroke={C.forecast} strokeWidth={2} strokeDasharray="6 4" dot={false} connectNulls>
           <LabelList content={endLabel("Forecast", C.forecast, lastIndex(data, "forecast"), -8)} />
         </Line>
-        <Line dataKey="actual" name="Actual" stroke={C.ink} strokeWidth={2} dot={false} connectNulls>
+        <Line {...ANIM} dataKey="actual" name="Actual" stroke={C.ink} strokeWidth={2} dot={false} connectNulls>
           <LabelList content={endLabel("Actual", C.ink, lastIndex(data, "actual"), 6)} />
         </Line>
-        <Line dataKey="dependable" name={`Count on (${day.confidence}%)`} stroke={C.hue} strokeWidth={3} dot={false} connectNulls>
+        <Line {...ANIM} dataKey="dependable" name={`Count on (${day.confidence}%)`} stroke={C.hue} strokeWidth={3} dot={false} connectNulls>
           <LabelList content={endLabel(`Count on ${day.confidence}%`, C.hue, lastIndex(data, "dependable"))} />
         </Line>
       </ComposedChart>
