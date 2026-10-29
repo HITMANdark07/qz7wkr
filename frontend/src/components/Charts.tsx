@@ -4,7 +4,7 @@ import {
 } from "recharts";
 import { Accuracy, DayView, fmtTime } from "../api";
 
-const C = { dependable: "#2e8b57", actual: "#1f7a8c", forecast: "#e07a1f", band: "#e07a1f", bias: "#7a4fa3", grid: "#e3e8ec" };
+const C = { truth: "#1e293b", dependable: "#16a34a", actual: "#1f7a8c", forecast: "#e07a1f", band: "#e07a1f", bias: "#7a4fa3", grid: "#e3e8ec" };
 const toGw = (mw: number) => (mw / 1000).toFixed(1);
 const gwTick = (v: number) => `${+(v / 1000).toFixed(1)}`;
 const mwTip = (v: number) => `${Math.round(v).toLocaleString()} MW`;
@@ -27,7 +27,7 @@ export function DayChart({ day }: { day: DayView }) {
         />
         <Legend />
         <Area dataKey="band" name="Likely range (P10–P90)" fill={C.band} fillOpacity={0.15} stroke="none" connectNulls />
-        <Line dataKey="actual" name="Actual wind" stroke={C.actual} strokeWidth={2.5} dot={false} connectNulls />
+        <Line dataKey="actual" name="Actual wind" stroke={C.truth} strokeWidth={2.5} dot={false} connectNulls />
         <Line dataKey="forecast" name="Forecast at decision time" stroke={C.forecast} strokeWidth={2.5}
           strokeDasharray="6 4" dot={false} connectNulls />
         <Line dataKey="dependable" name={`Wind you can count on (${day.confidence}%)`} stroke={C.dependable}

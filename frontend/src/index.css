@@ -52,5 +52,5 @@ footer { margin-top: 8px; }
 .plan th { position: sticky; top: 0; background: var(--bg); text-align: right; padding: 8px 10px; font-weight: 600; color: var(--muted); }
 .plan td { text-align: right; padding: 6px 10px; border-top: 1px solid var(--line); font-family: var(--mono); }
 .plan th:first-child, .plan td:first-child { text-align: left; }
-.plan .strong { color: #2e8b57; font-weight: 600; }
+.plan .strong { color: #16a34a; font-weight: 600; }
 .plan .short { color: #c0392b; font-weight: 600; }
